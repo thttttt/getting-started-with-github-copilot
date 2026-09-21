@@ -18,14 +18,53 @@ document.addEventListener("DOMContentLoaded", () => {
         const activityCard = document.createElement("div");
         activityCard.className = "activity-card";
 
-        const spotsLeft = details.max_participants - details.participants.length;
+        let spotsLeft = details.max_participants - details.participants.length;
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p class="availability"><strong>Availability:</strong> <span>${spotsLeft} spots left</span></p>
+          <div class="participants">
+            <strong>Participants:</strong>
+            <ul class="participants-list"></ul>
+          </div>
         `;
+
+        const participantsList = activityCard.querySelector(".participants-list");
+        details.participants.forEach((participant) => {
+          const participantItem = document.createElement("li");
+          participantItem.textContent = participant;
+
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "delete-participant";
+          deleteButton.setAttribute("aria-label", `Unregister ${participant}`);
+          deleteButton.title = "Unregister participant";
+          deleteButton.innerHTML = "&times;";
+          deleteButton.addEventListener("click", async () => {
+            try {
+              const response = await fetch(
+                `/activities/${encodeURIComponent(name)}/signup?email=${encodeURIComponent(participant)}`,
+                { method: "DELETE" }
+              );
+
+              if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.detail || "Failed to unregister participant");
+              }
+
+              participantItem.remove();
+              spotsLeft += 1;
+              activityCard.querySelector(".availability span").textContent = `${spotsLeft} spots left`;
+            } catch (error) {
+              console.error("Error unregistering participant:", error);
+            }
+          });
+
+          participantItem.appendChild(deleteButton);
+          participantsList.appendChild(participantItem);
+        });
 
         activitiesList.appendChild(activityCard);
 
